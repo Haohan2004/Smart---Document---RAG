@@ -20,7 +20,6 @@ def create_vectorstore(documents, embedder):
 
     logger.info("Đang tạo FAISS từ %d chunk.", len(chunks))
 
-    # Theo mục 3.3.4: FAISS tự tạo vector và giữ nội dung, metadata.
     vectorstore = FAISS.from_documents(chunks, embedder)
 
     logger.info("Đã tạo FAISS với %d vector.", vectorstore.index.ntotal)
