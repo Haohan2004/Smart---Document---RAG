@@ -83,10 +83,7 @@ def load_and_chunk_document(
         uploaded_at = datetime.now(timezone.utc).isoformat()
 
         for doc in documents:
-            # Metadata cũ ban đầu
-            doc.metadata["source"] = file_name
             doc.metadata["file_type"] = extension.lstrip(".")
-            # Thêm metadata tên file và thời gian upload
             doc.metadata["file_name"] = file_name
             doc.metadata["uploaded_at"] = uploaded_at
 
@@ -100,7 +97,6 @@ def load_and_chunk_document(
 
         chunks = splitter.split_documents(documents)
 
-        # Metadata cũ: chunk_index
         for index, chunk in enumerate(chunks):
             chunk.metadata["chunk_index"] = index
 
