@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Poppins:wght@400;500;600&display=swap');
+
+/* Main typography */
+html, body, [class*="st-"] {
+    font-family: 'Poppins', 'Montserrat', sans-serif;
+}
+
+/* Background: #F8F9FA (Light gray) - Main text: #212529 (Dark gray) */
+[data-testid="stAppViewContainer"] {
+    background-color: #F8F9FA;
+    color: #212529;
+}
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3,
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] span {
+    color: #212529 !important;
+}
+
+/* Sidebar: #2C2F33 (Dark gray) - Sidebar Text: #FFFFFF (White) */
+[data-testid="stSidebar"] {
+    background-color: #2C2F33;
+}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {
+    color: #FFFFFF !important;
+}
+
+/* Primary Color: #007BFF (Blue) cho Buttons và highlights */
+.stButton > button {
+    background-color: #007BFF;
+    color: white !important;
+    border: none;
+    border-radius: 50px; /* Capsule-shaped buttons */
+    padding: 0.5rem 1.5rem;
+}
+.stButton > button:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Secondary Color: #FFC107 (Amber) cho Upload buttons / Dropzone */
+[data-testid="stFileUploadDropzone"] {
+    border: 2px dashed #FFC107 !important;
+    background-color: rgba(255, 193, 7, 0.05);
+    border-radius: 15px;
+}
+[data-testid="stFileUploadDropzone"] button {
+    background-color: #FFC107 !important;
+    color: #212529 !important;
+    border-radius: 50px;
+}

@@ -1,0 +1,16 @@
+langchain==0.3.28
+langchain-community
+langchain-ollama
+langchain-huggingface
+streamlit
+faiss-cpu
+pdfplumber
+sentence-transformers
+torch
+python-dotenv
+streamlit-js-eval
+docx2txt
+rank_bm25
+pytesseract
+pillow
+pdf2image
