@@ -39,3 +39,5 @@ chat_history.json
 
 # Bỏ qua thư mục logs
 logs/
+
+.vs/
