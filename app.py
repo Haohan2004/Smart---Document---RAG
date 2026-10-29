@@ -5,12 +5,14 @@ import streamlit as st
 from datetime import datetime
 import time
 
+from src import retriever
 from src.embedder import get_embedder
 from src.llm import get_llm
 from src.loader import load_and_chunk_document
 from src.logger import get_logger
+from src.rag_chain import create_rag_chain
 from src.vectorstore import create_vectorstore, get_uploaded_vectorstore
-
+from src.retriever import create_retriever
 st.set_page_config(page_title="SmartDoc AI", layout="wide", initial_sidebar_state="expanded")
 
 logger = get_logger()
@@ -163,6 +165,23 @@ if st.session_state.current_file:
     st.success(f"✅ Đang làm việc với tài liệu: **{st.session_state.current_file}**")
 else:
     st.info("Vui lòng tải file PDF hoặc DOCX lên ở ô bên trái để bắt đầu hỏi đáp.")
+if st.session_state.is_thinking:
+    with st.chat_message("assistant", avatar="🟧"):
+        with st.spinner("Đang tìm kiếm thông tin và suy nghĩ"):
+            current_question = st.session_state.messages[-1]["content"]
+        retriever = create_retriever(st.session_state.vectorstore)
+    if retriever:
+        chain = create_rag_chain(retriever, llm)
+        answer = chain.invoke(current_question)
+    st.markdown(answer)
+    st.session_state.messages.append({
+        "role": "assistant",
+        "mode": "RAG",
+        "content": answer,
+
+    })
+    st.session_state.is_thinking = False
+    st.rerun()
 
 # Khung chứa lịch sử chat
 for msg in st.session_state.messages:
@@ -171,12 +190,12 @@ for msg in st.session_state.messages:
             st.write(msg["content"])
     else:
         with st.chat_message("assistant", avatar="🟧"):
-            if "mode" in msg:
-                st.caption(f"Chế độ: {msg['mode']}")
+         if "mode" in msg:
+            st.caption(f"Chế độ: {msg['mode']}")
             st.write(msg["content"])
-            if "citation" in msg:
-                with st.expander("Xem nguồn trích dẫn (Citations) & Highlight"):
-                    st.info(msg["citation"])
+            # if "citation" in msg:
+            #     with st.expander("Xem nguồn trích dẫn (Citations) & Highlight"):
+            #         st.info(msg["citation"])
 
 # --- BOTTOM AREA: UPLOAD & CHAT INLINE (THẲNG HÀNG VỚI NỘI DUNG CHAT PHÍA TRÊN) ---
 col1, col2 = st.columns([1, 9], gap="small")

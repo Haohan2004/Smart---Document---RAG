@@ -1,13 +1,12 @@
-from prompt import VIETNAMESE_PROMPT
-from llm import get_llm
-from retriever import create_retriever
+from src.prompt import VIETNAMESE_PROMPT
+
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
-def create_rag_chain(vectorstore):
-    retriever = create_retriever(vectorstore)
+def create_rag_chain(retriever,llm):
 
-    llm = get_llm()
+
+
 
     def format_docs(docs):
         return "\n\n".join(
@@ -19,7 +18,7 @@ def create_rag_chain(vectorstore):
             "context": retriever | format_docs,
             "question": RunnablePassthrough(),
         }
-        | prompt
+        | VIETNAMESE_PROMPT
         | llm
         | StrOutputParser()
     )
