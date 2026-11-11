@@ -61,10 +61,26 @@ with st.sidebar:
     with st.expander("Hướng dẫn sử dụng"):
         st.write("1. Tải lên tài liệu PDF hoặc DOCX.\n2. Đặt câu hỏi trong khung chat.\n3. Nhận câu trả lời kèm trích dẫn chính xác.")
         
-    with st.expander("Cấu hình mô hình"):
-        st.info("LLM: Qwen2.5:7b\n\nEmbedding: Multilingual MPNet")
-        chunk_size = st.slider("Chunk Size", 500, 2000, 1000)
-        chunk_overlap = st.slider("Chunk Overlap", 50, 200, 100)
+    with st.expander("⚙️ Cấu hình Chunking (Size & Overlap)", expanded=True):
+        st.info("LLM: Qwen2.5:3b | Embedding: Multilingual MPNet")
+        chunk_size = st.number_input(
+            "Chunk Size (độ dài ký tự mỗi đoạn):",
+            min_value=100,
+            max_value=3000,
+            value=1000,
+            step=50,
+            help="Số ký tự tối đa của một đoạn văn bản sau khi chia nhỏ."
+        )
+        chunk_overlap = st.number_input(
+            "Chunk Overlap (độ gối đầu giữa các đoạn):",
+            min_value=0,
+            max_value=1000,
+            value=100,
+            step=25,
+            help="Số ký tự trùng lặp giữa 2 đoạn liên tiếp để bảo toàn ngữ cảnh."
+        )
+        if chunk_overlap >= chunk_size:
+            st.error("⚠️ Chunk Overlap phải nhỏ hơn Chunk Size!")
         
     with st.expander("Thiết lập & Tùy chọn"):
         st.checkbox("Bật chế độ Streaming", value=True)
@@ -135,8 +151,12 @@ if st.session_state.is_processing_file and st.session_state.pending_file:
 
                 # 2. Toàn bộ khu vực này PHẢI nằm thụt lề ngang bằng với with... ở trên
                 # ── Splitting — Chia nhỏ văn bản thành chunks ─────────────────
-                chunks = load_and_chunk_document(filename=uploaded_file.name,content=file_bytes, chunk_size=1500,
-                                                 chunk_overlap=200)
+                chunks = load_and_chunk_document(
+                    filename=uploaded_file.name,
+                    content=file_bytes, 
+                    chunk_size=int(chunk_size),
+                    chunk_overlap=int(chunk_overlap)
+                )
 
                 st.session_state.vectorstore = create_vectorstore(chunks, embedder)
 
