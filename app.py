@@ -11,7 +11,7 @@ from src.llm import get_llm
 from src.loader import load_and_chunk_document
 from src.logger import get_logger
 from src.rag_chain import create_rag_chain
-from src.vectorstore import create_vectorstore, get_uploaded_vectorstore
+from src.vectorstore import create_vectorstore, get_uploaded_vectorstore, get_documents_metadata
 from src.retriever import create_retriever
 st.set_page_config(page_title="SmartDoc AI", layout="wide", initial_sidebar_state="expanded")
 
@@ -41,25 +41,32 @@ if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None  # nơi chứa FAISS index của tài liệu.
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "current_file" not in st.session_state:
-    st.session_state.current_file = None
+if "uploaded_files_list" not in st.session_state:
+    st.session_state.uploaded_files_list = []  # Danh sách tên các file đã upload
 
-
-# 2 biến cờ hiệu để mang Spinner ra giữa màn hình
+# Cờ hiệu xử lý
 if "is_processing_file" not in st.session_state:
     st.session_state.is_processing_file = False
-if "pending_file" not in st.session_state:
-    st.session_state.pending_file = None
+if "pending_files" not in st.session_state:
+    st.session_state.pending_files = []
 if "is_thinking" not in st.session_state:
     st.session_state.is_thinking = False
 
-# --- SIDEBAR (THEO ĐÚNG ẢNH MẪU) ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 class='sidebar-title' style='text-align: center; color: white; margin-top: 0; padding-top: 0; margin-bottom: 20px; font-weight: 700; font-size: 26px;'>SmartDoc AI</h2>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="sidebar-brand">
+        <span class="brand-icon">⚡</span>
+        <div class="brand-text">
+            <h2>SmartDoc AI</h2>
+            <span class="brand-badge">Qwen 2.5 (3B)</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 4 Expander tính năng
     with st.expander("Hướng dẫn sử dụng"):
-        st.write("1. Tải lên tài liệu PDF hoặc DOCX.\n2. Đặt câu hỏi trong khung chat.\n3. Nhận câu trả lời kèm trích dẫn chính xác.")
+        st.write("1. Tải lên 1 hoặc nhiều tài liệu PDF/DOCX.\n2. Chọn phạm vi tìm kiếm (Tất cả hoặc từng file).\n3. Đặt câu hỏi trong khung chat để nhận câu trả lời kèm trích dẫn.")
         
     with st.expander("⚙️ Cấu hình Chunking (Size & Overlap)", expanded=True):
         st.info("LLM: Qwen2.5:3b | Embedding: Multilingual MPNet")
@@ -86,159 +93,180 @@ with st.sidebar:
         st.checkbox("Bật chế độ Streaming", value=True)
         st.checkbox("Hiển thị Citations", value=True)
         
-    with st.expander("Tài liệu đã đăng",expanded=True):
-        uploaded_sources = get_uploaded_vectorstore(st.session_state.vectorstore)
-        if uploaded_sources:
+    with st.expander("📚 Tài liệu đã lưu trữ (Metadata)", expanded=True):
+        docs_meta = get_documents_metadata(st.session_state.vectorstore)
+        if docs_meta:
             st.markdown(
-                f"<div style='background-color:#E6F0FF; color:#31333F; border-radius:8px; padding:8px 12px; font-size:0.875rem;'>"
-                f"Đang index: <b>{len(uploaded_sources)}</b> tài liệu"
+                f"<div style='background-color:#E6F0FF; color:#1e3a8a; border-radius:8px; padding:8px 12px; font-size:0.875rem; font-weight:600; margin-bottom:10px;'>"
+                f"Đã lưu trữ: <b>{len(docs_meta)}</b> tài liệu"
                 f"</div>",
                 unsafe_allow_html=True
             )
+            for meta in docs_meta:
+                # Format ngày upload cho dễ nhìn
+                upload_time = meta['uploaded_at']
+                if upload_time != "N/A":
+                    try:
+                        dt = datetime.fromisoformat(upload_time)
+                        upload_time = dt.strftime("%d/%m/%Y %H:%M")
+                    except Exception:
+                        pass
+                st.markdown(f"""
+                <div style='background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 12px;'>
+                    <b>📄 {meta['file_name']}</b><br>
+                    <span style='color: #94a3b8;'>Loại:</span> <code>{meta['file_type']}</code> | 
+                    <span style='color: #94a3b8;'>Chunks:</span> <code>{meta['chunks_count']}</code><br>
+                    <span style='color: #94a3b8;'>Ngày:</span> {upload_time}
+                </div>
+                """, unsafe_allow_html=True)
 
-            for src in uploaded_sources:
-                st.caption(f"• {src}")
-
-            source_options = ["Tất cả tài liệu"] + uploaded_sources
-            st.selectbox(
-                "Tìm kiếm trong:",
+            source_options = ["Tất cả tài liệu"] + [m["file_name"] for m in docs_meta]
+            selected_source = st.selectbox(
+                "🔍 Tìm kiếm trong phạm vi:",
                 options=source_options,
                 index=0,
                 key="source_filter_select"
             )
         else:
-            st.info("Chưa có tài liệu nào được upload.")
-    st.markdown("<div style='margin-top: 25px; margin-bottom: 12px; text-align: center; font-weight: 600; color: white; font-size: 15px;'>Lịch sử cuộc trò chuyện</div>", unsafe_allow_html=True)
+            selected_source = "Tất cả tài liệu"
+            st.info("Chưa có tài liệu nào trong kho lưu trữ.")
+
+    st.markdown("<div style='margin-top: 25px; margin-bottom: 12px; text-align: center; font-weight: 600; color: white; font-size: 15px;'>Thao tác</div>", unsafe_allow_html=True)
 
     # 2 Nút Đặt lại lịch sử & Hộp thoại mới
-    if st.button("🔄 Đặt lại lịch sử", use_container_width=True, key="btn_reset_history"):
+    if st.button("🔄 Đặt lại lịch sử chat", use_container_width=True, key="btn_reset_history"):
         st.session_state.messages = []
         st.rerun()
 
-    if st.button("✨ Hộp thoại mới", use_container_width=True, key="btn_new_chat"):
+    if st.button("✨ Xóa toàn bộ dữ liệu & làm mới", use_container_width=True, key="btn_new_chat"):
         st.session_state.messages = []
-        st.session_state.file_name = None
+        st.session_state.vectorstore = None
+        st.session_state.uploaded_files_list = []
         st.rerun()
-
-    # Danh sách các đoạn chat trước đó
 
 
 # --- MAIN AREA: TIÊU ĐỀ & CẢNH BÁO ---
-st.title("📄 Hỏi đáp thông minh với tài liệu")
-st.markdown(
-    "**SmartDoc AI** - Upload PDF hoặc DOCX → hỏi bất kỳ câu gì liên quan đến nội dung tài liệu. Hệ thống chạy cục bộ, bảo mật cao.")
+st.markdown("""
+<div class="main-header">
+    <h1>📄 SmartDoc AI — Hỏi đáp thông minh với đa tài liệu</h1>
+    <p>Hỗ trợ tải lên nhiều file PDF / DOCX cùng lúc, lưu trữ metadata (tên file, ngày tải, loại file) và truy vấn bằng mô hình Qwen 2.5 (3B).</p>
+</div>
+""", unsafe_allow_html=True)
+
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
-if st.session_state.is_processing_file and st.session_state.pending_file:
-        uploaded_file = st.session_state.pending_file
-        with st.spinner("Đang xử lý tài liệu..."):
-            file_bytes = uploaded_file.getvalue()
+# --- KHỐI UPLOAD ĐA TÀI LIỆU ---
+st.markdown("### 📤 Tải tài liệu lên hệ thống")
+uploaded_files = st.file_uploader(
+    "Chọn một hoặc nhiều file PDF / DOCX:",
+    type=["pdf", "docx"],
+    accept_multiple_files=True,
+    help="Bạn có thể chọn cùng lúc nhiều file PDF hoặc Word (.docx) để đưa vào cùng một kho tri thức."
+)
+
+if uploaded_files:
+    # Lọc ra những file mới chưa được xử lý
+    new_files = [f for f in uploaded_files if f.name not in st.session_state.uploaded_files_list]
+    if new_files and not st.session_state.is_processing_file:
+        st.session_state.pending_files = new_files
+        st.session_state.is_processing_file = True
+        st.rerun()
+
+# Xử lý các file đang chờ xử lý
+if st.session_state.is_processing_file and st.session_state.pending_files:
+    files_to_process = st.session_state.pending_files
+    with st.spinner(f"Đang xử lý và trích xuất {len(files_to_process)} tài liệu..."):
+        all_new_chunks = []
+        success_files = []
+        
+        for up_file in files_to_process:
+            file_bytes = up_file.getvalue()
             file_size_mb = len(file_bytes) / (1024 * 1024)
 
-            # Kiểm tra kích thước file
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-                st.error(f"File quá lớn ({file_size_mb:.1f}MB). Giới hạn tối đa là {MAX_FILE_SIZE_MB}MB.")
-                st.stop()  # Dừng app ngay lập tức thay cho continue
-
-            # Lấy đuôi file (.pdf, .docx)
-
-            tmp_path = None
+                st.error(f"File {up_file.name} quá lớn ({file_size_mb:.1f}MB > {MAX_FILE_SIZE_MB}MB), đã bỏ qua.")
+                continue
 
             try:
-
-                logger.info(f"Upload nhận file: {uploaded_file.name} | Size: {file_size_mb:.2f}MB")  # ← LOG 1
-
-                # 2. Toàn bộ khu vực này PHẢI nằm thụt lề ngang bằng với with... ở trên
-                # ── Splitting — Chia nhỏ văn bản thành chunks ─────────────────
+                logger.info(f"Đang chunk file: {up_file.name} | Size: {file_size_mb:.2f}MB")
                 chunks = load_and_chunk_document(
-                    filename=uploaded_file.name,
-                    content=file_bytes, 
+                    filename=up_file.name,
+                    content=file_bytes,
                     chunk_size=int(chunk_size),
                     chunk_overlap=int(chunk_overlap)
                 )
-
-                st.session_state.vectorstore = create_vectorstore(chunks, embedder)
-
-                # Cập nhật thông tin sau khi xử lý thành công
-                st.session_state.current_file = uploaded_file.name
-
-                logger.info(f"Vectorstore cập nhật xong: {uploaded_file.name} | chunks={len(chunks)}")  # ← LOG 2
-
-                # 3. Các chữ except phải thẳng hàng dọc với chữ try
-            except ValueError as ve:
-                # Bắt các lỗi do chính mình chủ động ném ra
-                st.error(f"⚠️ Lỗi dữ liệu: {str(ve)}")
-                logger.warning(f"File không hợp lệ ({uploaded_file.name}): {str(ve)}")
-
+                all_new_chunks.extend(chunks)
+                success_files.append(up_file.name)
             except Exception as e:
-                # Bắt tất cả các lỗi hệ thống không lường trước
-                st.error("Có lỗi hệ thống xảy ra khi đọc file. Vui lòng xem chi tiết ở Terminal hoặc thử file khác.")
-                # Dòng log này BẮT BUỘC phải thụt lề vào trong except
-                logger.error(f"Lỗi hệ thống khi xử lý {uploaded_file.name}: {str(e)}", exc_info=True)
-        st.session_state.is_processing_file = False
-        st.session_state.pending_file = None
-        st.rerun()
+                st.error(f"Lỗi khi xử lý file {up_file.name}: {str(e)}")
+                logger.error(f"Lỗi file {up_file.name}: {str(e)}", exc_info=True)
 
-# Banner thông báo trạng thái file
-if st.session_state.current_file:
-    st.success(f"✅ Đang làm việc với tài liệu: **{st.session_state.current_file}**")
+        if all_new_chunks:
+            if st.session_state.vectorstore is None:
+                st.session_state.vectorstore = create_vectorstore(all_new_chunks, embedder)
+            else:
+                # Bổ sung tài liệu mới vào VectorStore hiện tại
+                st.session_state.vectorstore.add_documents(all_new_chunks)
+            
+            st.session_state.uploaded_files_list.extend(success_files)
+            logger.info(f"Đã cập nhật Vectorstore: thêm {len(all_new_chunks)} chunks từ {len(success_files)} files.")
+
+    st.session_state.is_processing_file = False
+    st.session_state.pending_files = []
+    st.rerun()
+
+# Banner thông báo trạng thái tài liệu hiện tại
+if st.session_state.uploaded_files_list:
+    files_badge = ", ".join([f"`{f}`" for f in st.session_state.uploaded_files_list])
+    st.success(f"✅ Đã nạp thành công **{len(st.session_state.uploaded_files_list)}** tài liệu: {files_badge}")
 else:
-    st.info("Vui lòng tải file PDF hoặc DOCX lên ở ô bên trái để bắt đầu hỏi đáp.")
-if st.session_state.is_thinking:
-    with st.chat_message("assistant", avatar="🟧"):
-        with st.spinner("Đang tìm kiếm thông tin và suy nghĩ"):
-            current_question = st.session_state.messages[-1]["content"]
-        retriever = create_retriever(st.session_state.vectorstore)
-    if retriever:
-        chain = create_rag_chain(retriever, llm)
-        answer = chain.invoke(current_question)
-    st.markdown(answer)
-    st.session_state.messages.append({
-        "role": "assistant",
-        "mode": "RAG",
-        "content": answer,
+    st.info("💡 Vui lòng tải một hoặc nhiều file PDF / DOCX ở trên để bắt đầu hỏi đáp.")
 
-    })
+# Xử lý câu trả lời của AI
+if st.session_state.is_thinking:
+    with st.chat_message("assistant", avatar="🤖"):
+        with st.spinner("Đang tìm kiếm thông tin và suy nghĩ..."):
+            current_question = st.session_state.messages[-1]["content"]
+            retriever = create_retriever(
+                st.session_state.vectorstore,
+                selected_source=st.session_state.get("source_filter_select", "Tất cả tài liệu"),
+                k=3
+            )
+        if retriever:
+            chain = create_rag_chain(retriever, llm)
+            answer = chain.invoke(current_question)
+        else:
+            answer = "Chưa có vectorstore để tìm kiếm."
+            
+        st.markdown(answer)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "mode": f"RAG ({st.session_state.get('source_filter_select', 'Tất cả tài liệu')})",
+            "content": answer,
+        })
     st.session_state.is_thinking = False
     st.rerun()
 
-# Khung chứa lịch sử chat
+# Khung hiển thị lịch sử chat
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        with st.chat_message("user", avatar="🔴"):
+        with st.chat_message("user", avatar="👤"):
             st.write(msg["content"])
     else:
-        with st.chat_message("assistant", avatar="🟧"):
-         if "mode" in msg:
-            st.caption(f"Chế độ: {msg['mode']}")
+        with st.chat_message("assistant", avatar="🤖"):
+            if "mode" in msg:
+                st.caption(f"Chế độ: {msg['mode']}")
             st.write(msg["content"])
-            # if "citation" in msg:
-            #     with st.expander("Xem nguồn trích dẫn (Citations) & Highlight"):
-            #         st.info(msg["citation"])
 
-# --- BOTTOM AREA: UPLOAD & CHAT INLINE (THẲNG HÀNG VỚI NỘI DUNG CHAT PHÍA TRÊN) ---
-col1, col2 = st.columns([1, 9], gap="small")
+# Ô chat input
+prompt = st.chat_input("Nhập câu hỏi về tài liệu...")
+if prompt:
+    if not st.session_state.uploaded_files_list:
+        st.warning("⚠️ Vui lòng tải ít nhất một tài liệu lên trước khi đặt câu hỏi!")
+        st.stop()
 
-MAX_FILE_SIZE_MB = 50
-MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
-error_messages = []  # Danh sách lỗi
-with col1:
-    uploaded_file = st.file_uploader("Tải tài liệu", type=["pdf", "docx"], label_visibility="collapsed")
-    if uploaded_file and uploaded_file.name != st.session_state.current_file:
-        if not st.session_state.is_processing_file:
-            st.session_state.pending_file = uploaded_file
-            st.session_state.is_processing_file = True
-            st.rerun()
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.is_thinking = True
+    st.rerun()
 
-
-with col2:
-    prompt = st.chat_input("Nhập câu hỏi về tài liệu...")
-    if prompt:
-        if not st.session_state.current_file:
-            st.warning("Vui lòng tải tài liệu lên trước khi đặt câu hỏi!")
-            st.stop()
-
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.is_thinking = True
-        st.rerun()
