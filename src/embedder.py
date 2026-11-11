@@ -1,5 +1,3 @@
-"""Tạo model embedding theo mục 3.3.3 và 4.4.1 của assignment."""
-
 from langchain_huggingface import HuggingFaceEmbeddings
 
 

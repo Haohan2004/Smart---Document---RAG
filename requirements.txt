@@ -3,7 +3,7 @@ langchain-community
 langchain-ollama
 langchain-huggingface
 streamlit
-faiss-cpu
+faiss-cpu==1.13.2
 pdfplumber
 sentence-transformers
 torch
