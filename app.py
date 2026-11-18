@@ -172,11 +172,13 @@ if st.session_state.is_thinking:
         retriever = create_retriever(st.session_state.vectorstore)
     if retriever:
         chain = create_rag_chain(retriever, llm)
-        answer = chain.invoke(current_question)
+        # The latest user message is the current question; memory contains prior turns.
+        chat_history = st.session_state.messages[:-1]
+        answer = chain.invoke({"question": current_question, "chat_history": chat_history})
     st.markdown(answer)
     st.session_state.messages.append({
         "role": "assistant",
-        "mode": "RAG",
+        "mode": "Advanced RAG · Self-RAG",
         "content": answer,
 
     })
