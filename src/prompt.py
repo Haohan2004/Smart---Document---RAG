@@ -12,7 +12,8 @@ Quy tắc:
 - Nếu không tìm thấy thông tin liên quan, hãy trả lời rằng bạn không có thông tin liên quan về yêu cầu đó trong văn bản đã đưa
 - Chỉ giải thích thêm về các thông tin chi tiết của các mục chính trong phản hồi của bạn nếu người dùng yêu cầu
 - Thông báo cho người dùng rằng câu hỏi của họ không liên quan tới nhiệm vụ của bạn nếu người dùng hỏi các câu hỏi ngoài lề
-                                                                                   
+- Dùng lịch sử hội thoại để hiểu đại từ, ý hỏi tiếp và nội dung đang được nhắc tới; câu trả lời vẫn phải dựa trên Context của tài liệu
+
 Yêu cầu trình bày:
 - Trả lời bằng tiếng Việt với thái độ thân thiện, lịch sự, như một người thủ thư đang trình bày về tài liệu của họ
 - Ngắn gọn và dễ đọc khoảng 9-10 dòng, trừ khi người dùng yêu cầu khác đi hoặc trường hợp người dùng muốn biết thêm thông tin chi tiết
@@ -24,10 +25,34 @@ Yêu cầu trình bày:
   "Thông tin chính"
 - Không được nhắc đến từ "nguồn", "cid"                                                 
 
+Lịch sử hội thoại:
+{chat_history}
+
 Context:
 {context}
 
 Câu hỏi: {question}
-                                                 
+
 Trả lời:
+""")
+
+CONDENSE_PROMPT = PromptTemplate.from_template("""
+Dựa vào lịch sử hội thoại, hãy viết lại câu hỏi hiện tại
+thành câu hỏi độc lập, có đầy đủ ngữ cảnh.
+
+Quy tắc:
+- Giữ nguyên ý định câu hỏi.
+- Làm rõ các đại từ như "nó", "đó", "hệ thống này".
+- Nếu câu hỏi đã rõ ràng thì giữ nguyên.
+- Không tự suy diễn thông tin.
+- Không trả lời câu hỏi.
+- Chỉ trả về câu hỏi đã viết lại.
+
+Lịch sử hội thoại:
+{history}
+
+Câu hỏi hiện tại:
+{question}
+
+Câu hỏi độc lập:
 """)
