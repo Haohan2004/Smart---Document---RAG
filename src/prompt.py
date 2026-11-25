@@ -32,6 +32,27 @@ Context:
 {context}
 
 Câu hỏi: {question}
-                                                 
+
 Trả lời:
+""")
+
+CONDENSE_PROMPT = PromptTemplate.from_template("""
+Dựa vào lịch sử hội thoại, hãy viết lại câu hỏi hiện tại
+thành câu hỏi độc lập, có đầy đủ ngữ cảnh.
+
+Quy tắc:
+- Giữ nguyên ý định câu hỏi.
+- Làm rõ các đại từ như "nó", "đó", "hệ thống này".
+- Nếu câu hỏi đã rõ ràng thì giữ nguyên.
+- Không tự suy diễn thông tin.
+- Không trả lời câu hỏi.
+- Chỉ trả về câu hỏi đã viết lại.
+
+Lịch sử hội thoại:
+{history}
+
+Câu hỏi hiện tại:
+{question}
+
+Câu hỏi độc lập:
 """)

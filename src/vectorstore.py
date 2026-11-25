@@ -27,6 +27,15 @@ def create_vectorstore(documents, embedder):
     logger.info("Đã tạo FAISS với %d vector.", vectorstore.index.ntotal)
     return vectorstore
 
+def add_to_vectorstore(existing_vectorstore: FAISS, new_chunks, embedder) -> FAISS:
+    # Nếu chưa có vectorstore thì tạo mới
+    if existing_vectorstore is None:
+        return create_vectorstore(new_chunks, embedder)
+
+    # Nếu đã có vectorstore thì thêm chunks mới
+    existing_vectorstore.add_documents(new_chunks)
+
+    return existing_vectorstore
 def get_uploaded_vectorstore(vectorstore):
     if vectorstore is None:
         return []
@@ -41,3 +50,5 @@ def get_uploaded_vectorstore(vectorstore):
         return sorted(sources)
     except Exception:
         return []
+
+

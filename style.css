@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Poppins:wght@400;500;600&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 /* Main typography */
 html, body, [class*="st-"] {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: 'Be Vietnam Pro', 'Montserrat', sans-serif;
 }
 
 /* Background: #F8F9FA (Light gray) - Main text: #212529 (Dark gray) */
@@ -58,7 +58,7 @@ html, body, [class*="st-"] {
 
     /* Ép font lên các thẻ chứa text, chừa icon ra */
     h1, h2, h3, h4, h5, h6, p, label, li, .stMarkdown div {
-        font-family: 'Poppins', 'Montserrat', sans-serif !important;
+        font-family: 'Be Vietnam Pro', 'Montserrat', sans-serif !important;
     }
 
     /* Đảm bảo các thành phần icon của Streamlit giữ nguyên font Material */
@@ -77,18 +77,28 @@ html, body, [class*="st-"] {
     /* Thiết kế Sidebar & Cố định kích thước, cấm kéo giãn */
     [data-testid="stSidebar"] {
         background-color: #262730 !important;
-        width: 300px !important;
-        min-width: 300px !important;
-        max-width: 300px !important;
+        width: 350px !important;
+        min-width: 350px !important;
+        max-width: 350px !important;
     }
-    [data-testid="stSidebar"] > div:first-child {
-        width: 300px !important;
-        min-width: 300px !important;
-        max-width: 300px !important;
-        padding-top: 0.2rem !important;
-        padding-left: 1.2rem !important;
-        padding-right: 1.2rem !important;
-    }
+  [data-testid="stSidebar"] > div:first-child {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+
+    padding-top: 0.2rem !important;
+    padding-left: 1.2rem !important;
+    padding-right: 1.2rem !important;
+}
+
+/* Đảm bảo nội dung bên trong giãn hết Sidebar */
+[data-testid="stSidebar"]
+[data-testid="stSidebarUserContent"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
 
     /* Kéo toàn bộ nội dung Sidebar lên sát đỉnh trên cùng (triệt tiêu padding 6rem mặc định) */
     [data-testid="stSidebar"] [data-testid="stSidebarUserContent"],
@@ -332,7 +342,7 @@ html, body, [class*="st-"] {
     div[data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) {
         position: fixed !important;
         bottom: 0 !important;
-        left: 300px !important; /* Bắt đầu sau Sidebar 300px */
+        left: 350px !important; /* Bắt đầu sau Sidebar 300px */
         right: 0 !important;
         background-color: #ffffff !important;
         padding: 10px 3.5rem 14px 3.5rem !important; /* Khớp chuẩn xác lề trái & phải của nội dung phía trên */
@@ -366,6 +376,10 @@ html, body, [class*="st-"] {
         flex: 1 1 920px !important;
         display: flex !important;
         align-items: center !important;
+    }
+
+    [data-testid="stChatInput"] textarea {
+        color: aliceblue !important;
     }
 
     /* Khung chat input dài vừa vặn (max-width 920px) */
@@ -450,4 +464,32 @@ html, body, [class*="st-"] {
 [data-testid="stFileUploader"] section button {
     flex: 0 0 auto !important;
     white-space: nowrap !important;
+}
+/* Chỉnh màu riêng cho ô hiển thị Hybrid Search */
+[data-testid="stSidebar"] .hybrid-ratio-box {
+    background-color: #ffffff !important;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+[data-testid="stSidebar"] .hybrid-ratio-box span {
+    color: #5264c9 !important;
+    font-size: 14px;
+    font-weight: 700;
+}
+.st-key-confirm_delete_doc_yes button,
+.st-key-confirm_delete_doc_no button {
+    padding: 8px 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.st-key-confirm_delete_doc_yes button p,
+.st-key-confirm_delete_doc_no button p {
+    font-size: 14px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
 }
